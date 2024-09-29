@@ -1,0 +1,17 @@
+Options All -Indexes
+Options -MultiViews
+
+RewriteEngine On
+
+# Habilitar CORS
+
+
+# Asegurarse de que no se apliquen reglas a archivos o directorios reales
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Redirigir todas las solicitudes a index.php excepto las que correspondan a archivos reales o directorios
+RewriteRule ^([a-zA-Z_-]+)$ index.php?action=$1 [L,QSA]
+RewriteRule ^([a-zA-Z_-]+)/([0-9]+)$ index.php?action=$1&id=$2 [L,QSA]
+RewriteRule ^([a-zA-Z_-]+)/([a-zA-Z_-]+)$ index.php?action=$1&subaction=$2 [L,QSA]
+RewriteRule ^([a-zA-Z_-]+)/([a-zA-Z_-]+)/([0-9]+)$ index.php?action=$1&subaction=$2&id=$3 [L,QSA]
