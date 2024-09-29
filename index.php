@@ -11,7 +11,7 @@ ini_set("log_errors",1);
 ini_set("error_log", "C:\\xampp\htdocs\api\logs");
 
 // Encabezados CORS
-header("Access-Control-Allow-Origin: http://localhost:5173"); 
+header("Access-Control-Allow-Origin: *"); 
 header("Access-Control-Allow-Headers: Authorization, X-API-KEY, Origin, X-Requested-With, Content-Type, Accept, Access-Control-Request-Method");
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE");
 
