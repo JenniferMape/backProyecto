@@ -23,8 +23,7 @@ class Account
                 $usuario->password_user = password_hash($data['password_user'], PASSWORD_DEFAULT);
             }
 
-            // Validar el CIF si se proporciona
-            if (!empty($data['cif_user']) && $this->validarCIF($data['cif_user'])) {
+            if($usuario->type_user==='COMPANY' && !empty($data['cif_user'])) {
                 $usuario->cif_user = $data['cif_user'];
             }
 
@@ -54,76 +53,98 @@ class Account
     public function getAvatar($id)
     {
         $usuario = ORM::for_table('users')->find_one($id);
-        $baseUrl = 'http://chollocuenca.com/';
 
         if ($usuario) {
             $avatar = $usuario->avatar_user;
             // Si no hay avatar, devolver la URL de la imagen por defecto
-            return empty($avatar) ? $baseUrl . 'default.png' : $baseUrl . $avatar;
+            return empty($avatar) ? null : $avatar;
         } else {
             return null; // Usuario no encontrado
         }
     }
 
-
-    public function updateAvatar($id, $avatar = null, $delete = false)
+    public function updateAvatar($id, $avatar = null)
     {
         $usuario = ORM::for_table('users')->find_one($id);
 
         if ($usuario) {
-            if ($delete) {
-                $usuario->avatar_user = null;
-            } else if (is_array($avatar) && isset($avatar['name']) && !empty($avatar['name'])) {
-                // Verificación de la extensión del archivo
+            $uploadDir = realpath(__DIR__ . '/../uploads/avatars/') . '/';
+
+            if (is_array($avatar) && isset($avatar['name']) && !empty($avatar['name'])) {
+                // Verificar la extensión y tipo de archivo
                 $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif'];
                 $extension = strtolower(pathinfo($avatar['name'], PATHINFO_EXTENSION));
 
-                // Verificación del tipo MIME
                 $allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif'];
                 $mimeType = mime_content_type($avatar['tmp_name']);
 
                 if (in_array($extension, $allowedExtensions) && in_array($mimeType, $allowedMimeTypes)) {
-                    // Generar un nuevo nombre para el archivo basado en el ID del usuario
                     $newFileName = $id . '.' . $extension;
-
-                    // Cambia a ruta absoluta para evitar problemas
-                    $uploadDir = realpath(__DIR__ . '/../uploads/avatars/') . '/';
                     $uploadPath = $uploadDir . $newFileName;
 
-                    // Mover el archivo subido a la carpeta de destino
+                    // Comprobar si ya hay un avatar existente y eliminarlo
+                    if ($usuario->avatar_user && file_exists($uploadDir . basename($usuario->avatar_user))) {
+                        unlink($uploadDir . basename($usuario->avatar_user));
+                    }
+
+                    // Mover el archivo subido
                     if (move_uploaded_file($avatar['tmp_name'], $uploadPath)) {
-                        // Guardar la ruta relativa del avatar en la base de datos
-                        $usuario->avatar_user = 'uploads/avatars/' . $newFileName;
+                        $usuario->avatar_user = 'http://chollocuenca.com/uploads/avatars/' . $newFileName;
                     } else {
-                        return ['error' => 'Error al mover el archivo subido.'];
+                        return 'Error al mover el archivo subido.'; // Mensaje claro de error
                     }
                 } else {
-                    return ['error' => 'Tipo de archivo no permitido. Solo se permiten archivos JPG, PNG o GIF.'];
+                    return 'Tipo de archivo no permitido. Solo se permiten archivos JPG, PNG o GIF.'; // Mensaje de error claro
                 }
             }
 
             $usuario->save();
             return true;
         } else {
-            return false;
+            return 'Usuario no encontrado.';
+        }
+    }
+
+    public function deleteAvatar($id)
+    {
+        $usuario = ORM::for_table('users')->find_one($id);
+
+        if ($usuario) {
+            // Ruta absoluta de la carpeta de uploads
+            $uploadDir = realpath(__DIR__ . '/../uploads/avatars/') . '/';
+
+            // Verificar si el usuario tiene un avatar y si el archivo existe
+            if ($usuario->avatar_user && file_exists($uploadDir . basename($usuario->avatar_user))) {
+                // Eliminar el archivo del servidor
+                unlink($uploadDir . basename($usuario->avatar_user));
+
+                // Eliminar la referencia del avatar en la base de datos
+                $usuario->avatar_user = null;
+                $usuario->save();
+
+                return ['success' => 'Avatar eliminado exitosamente.'];
+            } else {
+                return ['error' => 'No se encontró el avatar o el archivo no existe.'];
+            }
+        } else {
+            return ['error' => 'Usuario no encontrado.'];
         }
     }
 
     private function convertObj($obj)
     {
-        $baseUrl = 'http://chollocuenca.com'; 
         return [
             'id' => $obj->id ?? null,
             'name_user' => $obj->name_user ?? null,
             'email_user' => $obj->email_user ?? null,
             'cif_user' => $obj->cif_user ?? null,
-            'avatar_user' => !empty($obj->avatar_user) ? $baseUrl . $obj->avatar_user : $baseUrl . 'default.png',
+            'avatar_user' => $obj->avatar_user ?? null,
             'type_user' => $obj->type_user ?? null,
             'created_user' => $obj->created_user ?? null,
             'updated_user' => $obj->updated_user ?? null
         ];
     }
-    
+
 
     public function validarCIF($cif)
     {

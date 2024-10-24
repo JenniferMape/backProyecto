@@ -65,14 +65,14 @@ if (!empty($routesArray[1])) {
 
                     // Generar el token
                     $jwt = JWT::encode($payload, $key, 'HS256');
-                    $baseUrl = 'http://chollocuenca.com/'; // Asegúrate de que esta URL sea correcta
+                   
                     sendJsonResponse(200, [
                         'user' => [
                             'id' => $usuario->id,
                             'email_user' => $usuario->email_user,
                             'name_user' => $usuario->name_user,
                             'type_user' => $usuario->type_user,
-                            'avatar_user' => !empty($usuario->avatar_user) ? $baseUrl . $usuario->avatar_user : $baseUrl . 'default.png',
+                            'avatar_user' => $usuario->avatar_user,
                         ],
                         'token' => $jwt
                     ], 'Inicio de sesión exitoso.');

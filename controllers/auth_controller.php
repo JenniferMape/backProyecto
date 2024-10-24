@@ -66,7 +66,6 @@ if (!empty($routesArray[1])) {
                         $jwt = JWT::encode($payload, $key, 'HS256');
 
 
-
                         // Responder con éxito si el usuario es válido
                         sendJsonResponse(200, [
                             'user' => [

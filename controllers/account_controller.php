@@ -20,14 +20,14 @@ if ($routesArray[0] == 'account') {
                 // Obtener el id del usuario de la URL
                 $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT, ['options' => ['default' => 0, 'min_range' => 1]]);
                 if ($id <= 0) {
-                    sendJsonResponse(400, null, 'Invalid ID');
+                    sendJsonResponse(400, null, 'ID no válido');
                 } else {
                     $usuario = $account->getAccount($id);
                     if ($usuario) {
 
                         sendJsonResponse(200, $usuario);
                     } else {
-                        sendJsonResponse(404, null, 'User not found');
+                        sendJsonResponse(404, null, 'Usuario no encontrado');
                     }
                 }
                 break;
@@ -39,31 +39,30 @@ if ($routesArray[0] == 'account') {
                 $data = json_decode($json_data, true);
                 if (json_last_error() === JSON_ERROR_NONE) {
                     if ($account->updateAccount($data)) {
-                        sendJsonResponse(200, $data, 'User information updated successfully.');
+                        sendJsonResponse(200, $data, 'Datos actualizados correctamente.');
                     } else {
-                        sendJsonResponse(500, null, 'Failed to update user information.');
+                        sendJsonResponse(500, null, 'Error al actualizar la información del usuario');
                     }
                 } else {
-                    sendJsonResponse(400, null, 'Invalid data');
+                    sendJsonResponse(400, null, 'datos inválidos');
                 }
                 break;
 
             case 'DELETE':
                 $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT, ['options' => ['default' => 0, 'min_range' => 1]]);
                 if ($account->deleteAccount($id)) {
-                    sendJsonResponse(200, null, 'User deleted successfully.');
+                    sendJsonResponse(200, null, 'Usuario eliminado correctamente.');
                 } else {
-                    sendJsonResponse(404, null, 'User not found');
+                    sendJsonResponse(404, null, 'Usuario no encontrado');
                 }
                 break;
 
                 // Manejar peticiones que no se ajusten a los anteriores métodos
             default:
-                sendJsonResponse(405, null, 'Method Not Allowed');
+                sendJsonResponse(405, null, 'Metodo no permitido');
                 break;
         }
     } else if ($routesArray[1] == 'avatar') {
-        // print_r($_GET);
 
         // Manejar peticiones a /account/avatar
 
@@ -73,7 +72,7 @@ if ($routesArray[0] == 'account') {
                 $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT, ['options' => ['default' => 0, 'min_range' => 1]]);
 
                 if ($id <= 0) {
-                    sendJsonResponse(400, null, 'Invalid ID');
+                    sendJsonResponse(400, null, 'ID no válido');
                 } else {
                     // Llamar a la función getAvatar y obtener la respuesta
                     $avatar = $account->getAvatar($id);
@@ -82,93 +81,65 @@ if ($routesArray[0] == 'account') {
                     if ($avatarUrl) {
                         sendJsonResponse(200, $avatarUrl);
                     } else {
-                        sendJsonResponse(404, null, 'User not found');
+                        sendJsonResponse(404, null, 'Usuario no encontrado');
                     }
                 }
                 break;
-
 
 
             case 'POST':
-                // Obtener el id del usuario de la URL
+                // Obtener el ID del usuario de la URL
                 $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
 
+                // Verificar que el ID es válido y que hay un archivo subido sin errores
                 if ($id && isset($_FILES['avatar']) && $_FILES['avatar']['error'] === UPLOAD_ERR_OK) {
                     $file = $_FILES['avatar'];
 
-                    // Validar el tamaño del archivo (ejemplo: 2MB máximo)
-                    $maxFileSize = 2 * 1024 * 1024; // 2 MB
-                    if ($file['size'] > $maxFileSize) {
-                        sendJsonResponse(400, null, 'File size exceeds the 2MB limit.');
-                        break;
-                    }
+                    // Intentar actualizar el avatar
+                    $result = $account->updateAvatar($id, $file);
 
-                    // Validar el tipo de archivo (solo imágenes)
-                    $allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif'];
-                    $mimeType = mime_content_type($file['tmp_name']);
-                    if (!in_array($mimeType, $allowedMimeTypes)) {
-                        sendJsonResponse(400, null, 'Invalid file type. Only JPG, PNG, and GIF are allowed.');
-                        break;
-                    }
-
-                    // Definir la ruta de almacenamiento
-                    $uploadDir = __DIR__ . '/uploads/avatars/';
-                    if (!is_dir($uploadDir)) {
-                        mkdir($uploadDir, 0755, true); // Crear el directorio si no existe
-                    }
-
-                    // Generar el nuevo nombre del archivo (basado en el ID del usuario)
-                    $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
-                    $avatarFileName = $id . '.' . $extension;
-                    $uploadPath = $uploadDir . $avatarFileName;
-
-                    // Mover el archivo subido a la carpeta de destino
-                    if (move_uploaded_file($file['tmp_name'], $uploadPath)) {
-                        // Actualizar el avatar del usuario en la base de datos
-                        if ($account->updateAvatar($id, $avatarFileName)) {
-                            $avatar = $account->getAvatar($id);
-                            sendJsonResponse(200, $avatar, 'Avatar updated successfully.');
-                        } else {
-                            sendJsonResponse(500, null, 'Failed to update avatar in the database.');
-                        }
+                    if ($result === true) {
+                        // Si la actualización fue exitosa, obtener el nuevo avatar
+                        $avatar = $account->getAvatar($id);
+                        sendJsonResponse(200, $avatar, 'Avatar actualizado con éxito.');
                     } else {
-                        sendJsonResponse(500, null, 'Failed to upload avatar file.');
+                        // Si hay un error, devolverlo
+                        sendJsonResponse(400, null, $result);
                     }
                 } else {
-                    sendJsonResponse(400, null, 'Invalid data or file not provided.');
+                    // Devolver un error si el ID no es válido o no hay archivo
+                    sendJsonResponse(400, null, 'Datos inválidos o archivo no proporcionado.');
                 }
                 break;
 
+
+
             case 'DELETE':
-                // Obtener el id del avatar de la URL
+                // Obtener el id del usuario de la URL
                 $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
 
                 if ($id) {
-                    // Obtener la URL del avatar actual antes de eliminarlo
-                    $avatar = $account->getAvatar($id);
+                    $resultado = $account->deleteAvatar($id);
 
-                    if ($account->updateAvatar($id, null)) {
-                        // Eliminar el archivo del servidor
-                        if ($avatar && file_exists($avatar['avatar_url'])) {
-                            unlink($avatar['avatar_url']);
-                        }
-                        sendJsonResponse(200, null, 'Avatar deleted successfully.');
+                    if (isset($resultado['success'])) {
+                        sendJsonResponse(200, null, $resultado['success']);
                     } else {
-                        sendJsonResponse(500, null, 'Failed to delete avatar in the database.');
+                        sendJsonResponse(400, null, $resultado['error']);
                     }
                 } else {
-                    sendJsonResponse(400, null, 'Invalid ID');
+                    sendJsonResponse(400, null, 'ID de usuario no válido.');
                 }
                 break;
 
 
+
             default:
-                sendJsonResponse(405, null, 'Method Not Allowed');
+                sendJsonResponse(405, null, 'Método no permitido');
                 break;
         }
     } else {
-        sendJsonResponse(404, null, 'Resource not found');
+        sendJsonResponse(404, null, 'Recurso no encontrado');
     }
 } else {
-    sendJsonResponse(404, null, 'Resource not found');
+    sendJsonResponse(404, null, 'Recurso no encontrado');
 }
