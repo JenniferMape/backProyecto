@@ -31,8 +31,14 @@ if ($routesArray[0] == 'category') {
                     }
                 //Petición get que devuelve todas las categorias, no va acompañada por un id
                 } else {
-                   $allCategory = $controller->getAllCategories();
-                   sendJsonResponse(200, $allCategory);
+                    $allCategories = $controller->getAllCategories();
+
+                    // Validación y respuesta
+                    if (!empty($allCategories)) {
+                        sendJsonResponse(200, $allCategories);
+                    } else {
+                        sendJsonResponse(404, null, 'No hay categorías disponibles');
+                    }
                 }
                 break;
 

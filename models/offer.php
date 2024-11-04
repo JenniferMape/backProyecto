@@ -1,18 +1,22 @@
 <?php
 
-class Offer {
+class Offer
+{
 
-    public function getAllOffers() {
+    public function getAllOffers()
+    {
         $offers = ORM::for_table('offers')->find_many();
         return $this->convertCollection($offers);
     }
 
-    public function getOfferById($id) {
+    public function getOfferById($id)
+    {
         $offer = ORM::for_table('offers')->find_one($id);
         return $offer ? $this->convertObj($offer) : null;
     }
 
-    public function getOffersByTitle($title) {
+    public function getOffersByTitle($title)
+    {
         $title = trim($title);
         $titleFormat = '%' . $title . '%';
 
@@ -31,18 +35,21 @@ class Offer {
         return $this->convertCollection($offers);
     }
 
-    public function getOffersByCategory($id_category_offer) {
+    public function getOffersByCategory($id_category_offer)
+    {
         $offers = ORM::for_table('offers')->where('id_category_offer', $id_category_offer)->find_many();
-    
+
         return $this->convertCollection($offers);
     }
 
-    public function getOffersByCompany($id_company_offer) {
+    public function getOffersByCompany($id_company_offer)
+    {
         $offers = ORM::for_table('offers')->where('id_company_offer', $id_company_offer)->find_many();
         return $this->convertCollection($offers);
     }
 
-    public function findOffersByPriceRange($minPrice, $maxPrice, $orderBy = 'price_offer', $orderDirection = 'asc') {
+    public function findOffersByPriceRange($minPrice, $maxPrice, $orderBy = 'price_offer', $orderDirection = 'asc')
+    {
         // Valida que la dirección es válida 
         if (!in_array($orderDirection, ['asc', 'desc'])) {
             throw new InvalidArgumentException("Invalid order direction: $orderDirection");
@@ -50,9 +57,20 @@ class Offer {
 
         // Valida el nombre de la columna de ordenamiento 
         $validOrderColumns = [
-            'id', 'id_company_offer', 'id_category_offer', 'title_offer', 'price_offer', 'description_offer',
-            'start_date_offer', 'end_date_offer', 'discount_code_offer', 'image_offer', 'web_offer',
-            'address_offer', 'created_offer', 'updated_offer'
+            'id',
+            'id_company_offer',
+            'id_category_offer',
+            'title_offer',
+            'price_offer',
+            'description_offer',
+            'start_date_offer',
+            'end_date_offer',
+            'discount_code_offer',
+            'image_offer',
+            'web_offer',
+            'address_offer',
+            'created_offer',
+            'updated_offer'
         ];
         if (!in_array($orderBy, $validOrderColumns)) {
             throw new InvalidArgumentException("Invalid order by column: $orderBy");
@@ -73,13 +91,119 @@ class Offer {
         $offers = $query->find_many();
         return $this->convertCollection($offers);
     }
+    // public function uploadOfferImage($offerId, $image = null)
+    // {
+    //     // Verificar si la oferta existe
+    //     $offer = ORM::for_table('offers')->find_one($offerId);
 
-    public function addOffer($data) {
+    //     if ($offer) {
+    //         // Obtener el id_company_offer para estructurar los directorios
+    //         $companyId = $offer->id_company_offer;
+
+    //         // Directorio base para almacenar imágenes de ofertas
+    //         $baseUploadDir = realpath(__DIR__ . '/../uploads/offers/') . '/';
+
+    //         // Crear un subdirectorio para la empresa y otro para la oferta específica
+    //         $companyUploadDir = $baseUploadDir . $companyId . '/';
+    //         $offerUploadDir = $companyUploadDir . $offerId . '/';
+
+    //         // Crear los directorios si no existen
+    //         if (!file_exists($companyUploadDir)) {
+    //             mkdir($companyUploadDir, 0755, true);
+    //         }
+    //         if (!file_exists($offerUploadDir)) {
+    //             mkdir($offerUploadDir, 0755, true);
+    //         }
+
+    //         if (is_array($image) && isset($image['name']) && !empty($image['name'])) {
+    //             // Verificar la extensión y tipo de archivo
+    //             $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif'];
+    //             $extension = strtolower(pathinfo($image['name'], PATHINFO_EXTENSION));
+
+    //             $allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif'];
+    //             $mimeType = mime_content_type($image['tmp_name']);
+
+    //             if (in_array($extension, $allowedExtensions) && in_array($mimeType, $allowedMimeTypes)) {
+    //                 // Crear el nombre del archivo
+    //                 $newFileName = uniqid() . '.' . $extension;
+    //                 $uploadPath = $offerUploadDir . $newFileName;
+
+    //                 // Mover el archivo subido a la carpeta de la oferta
+    //                 if (move_uploaded_file($image['tmp_name'], $uploadPath)) {
+    //                     // Devolver el nombre del archivo si se mueve correctamente
+    //                     return $newFileName;
+    //                 } else {
+    //                     return 'Error al mover el archivo subido.'; // Mensaje claro de error
+    //                 }
+    //             } else {
+    //                 return 'Tipo de archivo no permitido. Solo se permiten archivos JPG, PNG o GIF.'; // Mensaje de error claro
+    //             }
+    //         }
+
+    //         return 'No se ha proporcionado ninguna imagen para subir.';
+    //     } else {
+    //         return 'Oferta no encontrada.';
+    //     }
+    // }
+    public function uploadOfferImage($offerId, $image = null)
+    {
+        // Verificar si la oferta existe
+        $offer = ORM::for_table('offers')->find_one($offerId);
+
+        if ($offer) {
+            $companyId = $offer->id_company_offer;
+
+            // Directorio base para almacenar imágenes de ofertas
+            $baseUploadDir = realpath(__DIR__ . '/../uploads/offers/') . '/';
+
+            // Crear estructura de carpetas
+            $companyUploadDir = $baseUploadDir . $companyId . '/';
+            $offerUploadDir = $companyUploadDir . $offerId . '/';
+
+            if (!file_exists($companyUploadDir)) {
+                mkdir($companyUploadDir, 0755, true);
+            }
+            if (!file_exists($offerUploadDir)) {
+                mkdir($offerUploadDir, 0755, true);
+            }
+
+            if (is_array($image) && isset($image['name']) && !empty($image['name'])) {
+                $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif'];
+                $extension = strtolower(pathinfo($image['name'], PATHINFO_EXTENSION));
+
+                $allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif'];
+                $mimeType = mime_content_type($image['tmp_name']);
+
+                if (in_array($extension, $allowedExtensions) && in_array($mimeType, $allowedMimeTypes)) {
+                    $newFileName = uniqid() . '.' . $extension;
+                    $uploadPath = $offerUploadDir . $newFileName;
+
+                    if (move_uploaded_file($image['tmp_name'], $uploadPath)) {
+                        // Retorna solo el nombre del archivo
+                        return $newFileName;
+                    } else {
+                        throw new RuntimeException('Error al mover el archivo subido.');
+                    }
+                } else {
+                    throw new RuntimeException('Tipo de archivo no permitido. Solo se permiten archivos JPG, PNG o GIF.');
+                }
+            }
+
+            throw new RuntimeException('No se ha proporcionado ninguna imagen para subir.');
+        } else {
+            throw new RuntimeException('Oferta no encontrada.');
+        }
+    }
+
+
+    public function addOffer($data, $image = null)
+    {
         // Verificación básica de los datos antes de crear la oferta
         if (empty($data['id_company_offer']) || empty($data['title_offer']) || empty($data['price_offer'])) {
-            throw new InvalidArgumentException("Los datos de la oferta no son válidos"); 
+            throw new InvalidArgumentException("Los datos de la oferta no son válidos");
         }
 
+        // Crear la oferta en la base de datos
         $offer = ORM::for_table('offers')->create();
         $offer->id_company_offer = $data['id_company_offer'];
         $offer->id_category_offer = $data['id_category_offer'];
@@ -89,15 +213,24 @@ class Offer {
         $offer->start_date_offer = $data['start_date_offer'];
         $offer->end_date_offer = $data['end_date_offer'];
         $offer->discount_code_offer = $data['discount_code_offer'];
-        $offer->image_offer = $data['image_offer'];
         $offer->web_offer = $data['web_offer'];
         $offer->address_offer = $data['address_offer'];
-       
+
+        // Guardar la oferta básica para obtener el ID
         $offer->save();
+
+        // Subir la imagen de la oferta usando el ID recién creado
+        $uploadedFileName = $this->uploadOfferImage($offer->id, $image);
+        $offer->image_offer = 'http://chollocuenca.com/uploads/offers/' . $data['id_company_offer'] . '/' . $offer->id . '/' . $uploadedFileName;
+        $offer->save();
+
+
         return $this->convertObj($offer); // Retorna el objeto convertido
     }
 
-    public function updateOffer($dataOffer) {
+
+    public function updateOffer($dataOffer)
+    {
         $offer = ORM::for_table('offers')->find_one($dataOffer['id']);
 
         if ($offer) {
@@ -112,7 +245,7 @@ class Offer {
             $offer->image_offer = $dataOffer['image_offer'] ?? $offer->image_offer;
             $offer->web_offer = $dataOffer['web_offer'] ?? $offer->web_offer;
             $offer->address_offer = $dataOffer['address_offer'] ?? $offer->address_offer;
-           
+
             // Guardar los cambios en la base de datos
             $offer->save();
 
@@ -124,7 +257,8 @@ class Offer {
         }
     }
 
-    public function deleteOffer($id) {
+    public function deleteOffer($id)
+    {
         $offer = ORM::for_table('offers')->find_one($id);
         if ($offer) {
             $offer->delete();
@@ -134,7 +268,8 @@ class Offer {
         }
     }
 
-    private function convertObj($obj) {
+    private function convertObj($obj)
+    {
         return [
             'id' => $obj->id ?? null,
             'id_company_offer' => $obj->id_company_offer ?? null,
@@ -161,4 +296,3 @@ class Offer {
         return $result;
     }
 }
-?>
