@@ -82,7 +82,7 @@ if ($routesArray[0] == 'offer') {
             // Comprobación de que los campos obligatorios estén completados
             if (
                 empty($_POST['id_company_offer']) ||
-                empty($_POST['id_category']) ||
+                empty($_POST['id_category_offer']) ||
                 empty($_POST['title_offer']) ||
                 empty($_POST['description_offer']) ||
                 empty($_POST['price_offer']) ||
@@ -109,7 +109,7 @@ if ($routesArray[0] == 'offer') {
 
             $data = array(
                 'id_company_offer' => $_POST['id_company_offer'],
-                'id_category_offer' => $_POST['id_category'],
+                'id_category_offer' => $_POST['id_category_offer'],
                 'title_offer' => $_POST['title_offer'],
                 'description_offer' => $_POST['description_offer'],
                 'price_offer' => $_POST['price_offer'],
