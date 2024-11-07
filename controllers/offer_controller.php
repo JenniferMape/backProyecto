@@ -76,7 +76,7 @@ if ($routesArray[0] == 'offer') {
                     }
                 }
             }
-
+            break;
             // Manejar peticiones de tipo POST para crear una nueva categoría
         case 'POST':
             // Comprobación de que los campos obligatorios estén completados
@@ -103,8 +103,8 @@ if ($routesArray[0] == 'offer') {
             }
 
             // Obtener otros datos y asignar null si no existen
-            $discount_code_offer = 
-            $web_offer = $_POST['web_offer'] ?? null;
+            $discount_code_offer =
+                $web_offer = $_POST['web_offer'] ?? null;
             $address_offer = $_POST['address_offer'] ?? null;
 
             $data = array(
@@ -117,7 +117,7 @@ if ($routesArray[0] == 'offer') {
                 'end_date_offer' => $_POST['end_date_offer'],
                 'discount_code_offer' => $_POST['discount_code_offer'] ?? null,
                 'web_offer' => $_POST['web_offer'] ?? null,
-                'address_offer' =>$_POST['address_offer'] ?? null
+                'address_offer' => $_POST['address_offer'] ?? null
             );
 
             try {
@@ -137,18 +137,57 @@ if ($routesArray[0] == 'offer') {
 
 
         case 'PUT':
+            // Leer los datos del cuerpo de la solicitud
             $json_data = file_get_contents('php://input');
-            $data = json_decode($json_data, true);
-            if (json_last_error() === JSON_ERROR_NONE) {
-                if ($controller->updateOffer($data)) {
-                    sendJsonResponse(200, $data, 'Información de la oferta actualizada con éxito');
+
+            // Convertir los datos JSON a un array
+            $dataOffer = json_decode($json_data, true);
+
+            // Si no se pudo decodificar el JSON, responder con error
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                sendJsonResponse(400, null, 'Error al procesar los datos JSON');
+                break;
+            }
+
+            // Lógica de manejo de imagen (si existe)
+            $image_offer = null;
+            if (isset($_FILES['image_offer']) && $_FILES['image_offer']['error'] === UPLOAD_ERR_OK) {
+                $image_offer = $_FILES['image_offer'];
+            } elseif (!empty($dataOffer['remove_image'])) {
+                $image_offer = 'remove'; // Indicador para eliminar la imagen si es necesario
+            }
+
+            // Verificar los datos recibidos
+            $data = array(
+                'id' => $dataOffer['id'] ?? null,
+                'id_category_offer' => $dataOffer['id_category_offer'] ?? null,
+                'title_offer' => $dataOffer['title_offer'] ?? null,
+                'description_offer' => $dataOffer['description_offer'] ?? null,
+                'price_offer' => $dataOffer['price_offer'] ?? null,
+                'start_date_offer' => $dataOffer['start_date_offer'] ?? null,
+                'end_date_offer' => $dataOffer['end_date_offer'] ?? null,
+                'discount_code_offer' => $dataOffer['discount_code_offer'] ?? null,
+                'web_offer' => $dataOffer['web_offer'] ?? null,
+                'address_offer' => $dataOffer['address_offer'] ?? null,
+            );
+
+            // Llamar a la función de actualización
+            try {
+                $offer = $controller->updateOffer($data, $image_offer);
+
+                // Verificar si la actualización fue exitosa
+                if ($offer) {
+                    sendJsonResponse(200, $offer, 'Información de la oferta actualizada con éxito');
                 } else {
-                    sendJsonResponse(500, null, 'Error al actualizar la información de la la oferta');
+                    sendJsonResponse(500, null, 'Error al actualizar la información de la oferta');
                 }
-            } else {
-                sendJsonResponse(400, null, 'Datos no válidos');
+            } catch (RuntimeException $e) {
+                sendJsonResponse(500, null, 'Error al actualizar la oferta: ' . $e->getMessage());
+            } catch (Exception $e) {
+                sendJsonResponse(500, null, 'Error inesperado: ' . $e->getMessage());
             }
             break;
+
 
 
             // Manejar peticiones de tipo DELETE para eliminar el usuario

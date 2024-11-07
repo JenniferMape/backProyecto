@@ -145,6 +145,132 @@ class Offer
     //         return 'Oferta no encontrada.';
     //     }
     // }
+
+
+
+    public function addOffer($data, $image = null)
+    {
+        // Verificación básica de los datos antes de crear la oferta
+        if (empty($data['id_company_offer']) || empty($data['title_offer']) || empty($data['price_offer'])) {
+            throw new InvalidArgumentException("Los datos de la oferta no son válidos");
+        }
+
+        // Crear la oferta en la base de datos
+        $offer = ORM::for_table('offers')->create();
+        $offer->id_company_offer = $data['id_company_offer'];
+        $offer->id_category_offer = $data['id_category_offer'];
+        $offer->title_offer = $data['title_offer'];
+        $offer->description_offer = $data['description_offer'];
+        $offer->price_offer = $data['price_offer'];
+        $offer->start_date_offer = $data['start_date_offer'];
+        $offer->end_date_offer = $data['end_date_offer'];
+        $offer->discount_code_offer = $data['discount_code_offer'];
+        $offer->web_offer = $data['web_offer'];
+        $offer->address_offer = $data['address_offer'];
+
+        // Guardar la oferta básica para obtener el ID
+        $offer->save();
+
+        // Subir la imagen de la oferta usando el ID recién creado
+        $uploadedFileName = $this->uploadOfferImage($offer->id, $image);
+        $offer->image_offer = 'http://chollocuenca.com/uploads/offers/' . $data['id_company_offer'] . '/' . $offer->id . '/' . $uploadedFileName;
+        $offer->save();
+
+
+        return $this->convertObj($offer); // Retorna el objeto convertido
+    }
+
+
+    public function updateOffer($dataOffer, $image = null)
+    {
+        // Buscar la oferta en la base de datos
+        $offer = ORM::for_table('offers')->find_one($dataOffer['id']);
+    
+        if ($offer) {
+            // Mostrar los datos recibidos para debug
+            //  var_dump($dataOffer); // Descomenta para verificar los datos
+    
+            // Actualizar los campos de la oferta con los datos recibidos
+            $offer->id_category_offer = isset($dataOffer['id_category_offer']) ? $dataOffer['id_category_offer'] : $offer->id_category_offer;
+            $offer->title_offer = isset($dataOffer['title_offer']) ? $dataOffer['title_offer'] : $offer->title_offer;
+            $offer->description_offer = isset($dataOffer['description_offer']) ? $dataOffer['description_offer'] : $offer->description_offer;
+            $offer->price_offer = isset($dataOffer['price_offer']) ? $dataOffer['price_offer'] : $offer->price_offer;
+            $offer->start_date_offer = isset($dataOffer['start_date_offer']) ? $dataOffer['start_date_offer'] : $offer->start_date_offer;
+            $offer->end_date_offer = isset($dataOffer['end_date_offer']) ? $dataOffer['end_date_offer'] : $offer->end_date_offer;
+            $offer->discount_code_offer = isset($dataOffer['discount_code_offer']) ? $dataOffer['discount_code_offer'] : $offer->discount_code_offer;
+            $offer->web_offer = isset($dataOffer['web_offer']) ? $dataOffer['web_offer'] : $offer->web_offer;
+            $offer->address_offer = isset($dataOffer['address_offer']) ? $dataOffer['address_offer'] : $offer->address_offer;
+    
+            // Manejo de la imagen
+            if ($image) {
+                // Si ya existe una imagen para la oferta, eliminarla
+                if (!empty($offer->image_offer)) {
+                    $this->deleteOfferImage($offer->image_offer);
+                }
+    
+                // Subir la nueva imagen y asignar la ruta a la oferta
+                $uploadedFileName = $this->uploadOfferImage($offer->id, $image);
+                $offer->image_offer = 'http://chollocuenca.com/uploads/offers/' . $dataOffer['id_company_offer'] . '/' . $offer->id . '/' . $uploadedFileName;
+            }
+    
+            // Guardar los cambios en la base de datos
+            $offer->save();
+    
+            // Retornar el objeto actualizado
+            return $this->convertObj($offer);
+        } else {
+            // Responder con error si la oferta no existe
+            return false;
+        }
+    }
+    
+
+
+    public function deleteOffer($id)
+    {
+        $offer = ORM::for_table('offers')->find_one($id);
+        if ($offer) {
+            $offer->delete();
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    private function convertObj($obj)
+    {
+        return [
+            'id' => $obj->id ?? null,
+            'id_company_offer' => $obj->id_company_offer ?? null,
+            'id_category_offer' => $obj->id_category_offer ?? null,
+            'title_offer' => $obj->title_offer ?? null,
+            'price_offer' => $obj->price_offer ?? null,
+            'description_offer' => $obj->description_offer ?? null,
+            'start_date_offer' => $obj->start_date_offer ?? null,
+            'end_date_offer' => $obj->end_date_offer ?? null,
+            'discount_code_offer' => $obj->discount_code_offer ?? null,
+            'image_offer' => $obj->image_offer ?? null,
+            'web_offer' => $obj->web_offer ?? null,
+            'address_offer' => $obj->address_offer ?? null,
+            'created_offer' => $obj->created_offer ?? null,
+            'updated_offer' => $obj->updated_offer ?? null
+        ];
+    }
+    private function convertCollection($collection)
+    {
+        $result = [];
+        foreach ($collection as $item) {
+            $result[] = $this->convertObj($item);
+        }
+        return $result;
+    }
+    private function deleteOfferImage($imagePath)
+    {
+        // Eliminar el archivo de imagen anterior del servidor
+        if (file_exists($imagePath)) {
+            unlink($imagePath);
+        }
+    }
     public function uploadOfferImage($offerId, $image = null)
     {
         // Verificar si la oferta existe
@@ -193,106 +319,5 @@ class Offer
         } else {
             throw new RuntimeException('Oferta no encontrada.');
         }
-    }
-
-
-    public function addOffer($data, $image = null)
-    {
-        // Verificación básica de los datos antes de crear la oferta
-        if (empty($data['id_company_offer']) || empty($data['title_offer']) || empty($data['price_offer'])) {
-            throw new InvalidArgumentException("Los datos de la oferta no son válidos");
-        }
-
-        // Crear la oferta en la base de datos
-        $offer = ORM::for_table('offers')->create();
-        $offer->id_company_offer = $data['id_company_offer'];
-        $offer->id_category_offer = $data['id_category_offer'];
-        $offer->title_offer = $data['title_offer'];
-        $offer->description_offer = $data['description_offer'];
-        $offer->price_offer = $data['price_offer'];
-        $offer->start_date_offer = $data['start_date_offer'];
-        $offer->end_date_offer = $data['end_date_offer'];
-        $offer->discount_code_offer = $data['discount_code_offer'];
-        $offer->web_offer = $data['web_offer'];
-        $offer->address_offer = $data['address_offer'];
-
-        // Guardar la oferta básica para obtener el ID
-        $offer->save();
-
-        // Subir la imagen de la oferta usando el ID recién creado
-        $uploadedFileName = $this->uploadOfferImage($offer->id, $image);
-        $offer->image_offer = 'http://chollocuenca.com/uploads/offers/' . $data['id_company_offer'] . '/' . $offer->id . '/' . $uploadedFileName;
-        $offer->save();
-
-
-        return $this->convertObj($offer); // Retorna el objeto convertido
-    }
-
-
-    public function updateOffer($dataOffer)
-    {
-        $offer = ORM::for_table('offers')->find_one($dataOffer['id']);
-
-        if ($offer) {
-            // Comprueba que los datos no estén vacíos y si no mantiene los que ya tiene
-            $offer->id_category_offer =  $dataOffer['id_category_offer'] ?? $offer->id_category_offer;
-            $offer->title_offer =  $dataOffer['title_offer'] ?? $offer->title_offer;
-            $offer->description_offer = $dataOffer['description_offer'] ?? $offer->description_offer;
-            $offer->price_offer = $dataOffer['price_offer'] ?? $offer->price_offer;
-            $offer->start_date_offer = $dataOffer['start_date_offer'] ?? $offer->start_date_offer;
-            $offer->end_date_offer = $dataOffer['end_date_offer'] ?? $offer->end_date_offer;
-            $offer->discount_code_offer = $dataOffer['discount_code_offer'] ?? $offer->discount_code_offer;
-            $offer->image_offer = $dataOffer['image_offer'] ?? $offer->image_offer;
-            $offer->web_offer = $dataOffer['web_offer'] ?? $offer->web_offer;
-            $offer->address_offer = $dataOffer['address_offer'] ?? $offer->address_offer;
-
-            // Guardar los cambios en la base de datos
-            $offer->save();
-
-            // Responder con éxito
-            return true;
-        } else {
-            // Responder con error si la oferta no existe
-            return false;
-        }
-    }
-
-    public function deleteOffer($id)
-    {
-        $offer = ORM::for_table('offers')->find_one($id);
-        if ($offer) {
-            $offer->delete();
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    private function convertObj($obj)
-    {
-        return [
-            'id' => $obj->id ?? null,
-            'id_company_offer' => $obj->id_company_offer ?? null,
-            'id_category_offer' => $obj->id_category_offer ?? null,
-            'title_offer' => $obj->title_offer ?? null,
-            'price_offer' => $obj->price_offer ?? null,
-            'description_offer' => $obj->description_offer ?? null,
-            'start_date_offer' => $obj->start_date_offer ?? null,
-            'end_date_offer' => $obj->end_date_offer ?? null,
-            'discount_code_offer' => $obj->discount_code_offer ?? null,
-            'image_offer' => $obj->image_offer ?? null,
-            'web_offer' => $obj->web_offer ?? null,
-            'address_offer' => $obj->address_offer ?? null,
-            'created_offer' => $obj->created_offer ?? null,
-            'updated_offer' => $obj->updated_offer ?? null
-        ];
-    }
-    private function convertCollection($collection)
-    {
-        $result = [];
-        foreach ($collection as $item) {
-            $result[] = $this->convertObj($item);
-        }
-        return $result;
     }
 }
