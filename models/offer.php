@@ -91,62 +91,6 @@ class Offer
         $offers = $query->find_many();
         return $this->convertCollection($offers);
     }
-    // public function uploadOfferImage($offerId, $image = null)
-    // {
-    //     // Verificar si la oferta existe
-    //     $offer = ORM::for_table('offers')->find_one($offerId);
-
-    //     if ($offer) {
-    //         // Obtener el id_company_offer para estructurar los directorios
-    //         $companyId = $offer->id_company_offer;
-
-    //         // Directorio base para almacenar imágenes de ofertas
-    //         $baseUploadDir = realpath(__DIR__ . '/../uploads/offers/') . '/';
-
-    //         // Crear un subdirectorio para la empresa y otro para la oferta específica
-    //         $companyUploadDir = $baseUploadDir . $companyId . '/';
-    //         $offerUploadDir = $companyUploadDir . $offerId . '/';
-
-    //         // Crear los directorios si no existen
-    //         if (!file_exists($companyUploadDir)) {
-    //             mkdir($companyUploadDir, 0755, true);
-    //         }
-    //         if (!file_exists($offerUploadDir)) {
-    //             mkdir($offerUploadDir, 0755, true);
-    //         }
-
-    //         if (is_array($image) && isset($image['name']) && !empty($image['name'])) {
-    //             // Verificar la extensión y tipo de archivo
-    //             $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif'];
-    //             $extension = strtolower(pathinfo($image['name'], PATHINFO_EXTENSION));
-
-    //             $allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif'];
-    //             $mimeType = mime_content_type($image['tmp_name']);
-
-    //             if (in_array($extension, $allowedExtensions) && in_array($mimeType, $allowedMimeTypes)) {
-    //                 // Crear el nombre del archivo
-    //                 $newFileName = uniqid() . '.' . $extension;
-    //                 $uploadPath = $offerUploadDir . $newFileName;
-
-    //                 // Mover el archivo subido a la carpeta de la oferta
-    //                 if (move_uploaded_file($image['tmp_name'], $uploadPath)) {
-    //                     // Devolver el nombre del archivo si se mueve correctamente
-    //                     return $newFileName;
-    //                 } else {
-    //                     return 'Error al mover el archivo subido.'; // Mensaje claro de error
-    //                 }
-    //             } else {
-    //                 return 'Tipo de archivo no permitido. Solo se permiten archivos JPG, PNG o GIF.'; // Mensaje de error claro
-    //             }
-    //         }
-
-    //         return 'No se ha proporcionado ninguna imagen para subir.';
-    //     } else {
-    //         return 'Oferta no encontrada.';
-    //     }
-    // }
-
-
 
     public function addOffer($data, $image = null)
     {
@@ -172,9 +116,11 @@ class Offer
         $offer->save();
 
         // Subir la imagen de la oferta usando el ID recién creado
-        $uploadedFileName = $this->uploadOfferImage($offer->id, $image);
-        $offer->image_offer = 'http://chollocuenca.com/uploads/offers/' . $data['id_company_offer'] . '/' . $offer->id . '/' . $uploadedFileName;
-        $offer->save();
+        if ($image) {
+            $uploadedFileName = $this->uploadOfferImage($offer->id, $image);
+            $offer->image_offer = 'http://chollocuenca.com/uploads/offers/' . $data['id_company_offer'] . '/' . $offer->id . '/' . $uploadedFileName;
+            $offer->save();
+        }
 
 
         return $this->convertObj($offer); // Retorna el objeto convertido
@@ -185,11 +131,8 @@ class Offer
     {
         // Buscar la oferta en la base de datos
         $offer = ORM::for_table('offers')->find_one($dataOffer['id']);
-    
+
         if ($offer) {
-            // Mostrar los datos recibidos para debug
-            //  var_dump($dataOffer); // Descomenta para verificar los datos
-    
             // Actualizar los campos de la oferta con los datos recibidos
             $offer->id_category_offer = isset($dataOffer['id_category_offer']) ? $dataOffer['id_category_offer'] : $offer->id_category_offer;
             $offer->title_offer = isset($dataOffer['title_offer']) ? $dataOffer['title_offer'] : $offer->title_offer;
@@ -200,8 +143,9 @@ class Offer
             $offer->discount_code_offer = isset($dataOffer['discount_code_offer']) ? $dataOffer['discount_code_offer'] : $offer->discount_code_offer;
             $offer->web_offer = isset($dataOffer['web_offer']) ? $dataOffer['web_offer'] : $offer->web_offer;
             $offer->address_offer = isset($dataOffer['address_offer']) ? $dataOffer['address_offer'] : $offer->address_offer;
-    
+
             // Manejo de la imagen
+
             if ($image) {
                 // Si ya existe una imagen para la oferta, eliminarla
                 if (!empty($offer->image_offer)) {
@@ -212,18 +156,17 @@ class Offer
                 $uploadedFileName = $this->uploadOfferImage($offer->id, $image);
                 $offer->image_offer = 'http://chollocuenca.com/uploads/offers/' . $dataOffer['id_company_offer'] . '/' . $offer->id . '/' . $uploadedFileName;
             }
-    
-            // Guardar los cambios en la base de datos
+            //Guardar los cambios en la base de datos
             $offer->save();
-    
-            // Retornar el objeto actualizado
+
+            //Retornar el objeto actualizado
             return $this->convertObj($offer);
         } else {
-            // Responder con error si la oferta no existe
+            //Responder con error si la oferta no existe
             return false;
         }
     }
-    
+
 
 
     public function deleteOffer($id)
@@ -264,11 +207,13 @@ class Offer
         }
         return $result;
     }
-    private function deleteOfferImage($imagePath)
+    public function deleteOfferImage($imagePath)
     {
-        // Eliminar el archivo de imagen anterior del servidor
-        if (file_exists($imagePath)) {
-            unlink($imagePath);
+        $serverPath = $_SERVER['DOCUMENT_ROOT'] . parse_url($imagePath, PHP_URL_PATH);
+        if (file_exists($serverPath)) {
+            return unlink($serverPath);
+        } else {
+            return "El archivo no existe en la ruta especificada." . $serverPath;
         }
     }
     public function uploadOfferImage($offerId, $image = null)

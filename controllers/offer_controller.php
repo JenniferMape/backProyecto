@@ -25,13 +25,13 @@ if ($routesArray[0] == 'offer') {
                 if (isset($filters['id'])) {
                     $id = $filters['id'];
                     if ($id <= 0) {
-                        sendJsonResponse(400, null, 'ID no válido');
+                        sendJsonResponse(400, NULL, 'ID no válido');
                     } else {
                         $offerById = $controller->getOfferById($id);
                         if ($offerById) {
                             sendJsonResponse(200, $offerById);
                         } else {
-                            sendJsonResponse(404, null, 'Oferta no encontrada');
+                            sendJsonResponse(404, NULL, 'Oferta no encontrada');
                         }
                     }
                 }
@@ -42,7 +42,7 @@ if ($routesArray[0] == 'offer') {
                     if ($offersByTitle) {
                         sendJsonResponse(200, $offersByTitle);
                     } else {
-                        sendJsonResponse(404, null, 'No se encontraron ofertas con ese título');
+                        sendJsonResponse(404, NULL, 'No se encontraron ofertas con ese título');
                     }
                 }
                 if (isset($filters['category'])) {
@@ -52,7 +52,7 @@ if ($routesArray[0] == 'offer') {
                     if ($offersByCategory) {
                         sendJsonResponse(200, $offersByCategory);
                     } else {
-                        sendJsonResponse(404, null, 'No se encontraron ofertas de esa categoría');
+                        sendJsonResponse(404, NULL, 'No se encontraron ofertas de esa categoría');
                     }
                 }
                 if (isset($filters['company'])) {
@@ -62,7 +62,7 @@ if ($routesArray[0] == 'offer') {
                     if ($offersByCompany) {
                         sendJsonResponse(200, $offersByCompany);
                     } else {
-                        sendJsonResponse(404, null, 'No se encontraron ofertas de esa empresa');
+                        sendJsonResponse(404, NULL, 'No se encontraron ofertas de esa empresa');
                     }
                 }
                 if (isset($filters['minPrice']) & isset($filters['maxPrice'])) {
@@ -72,15 +72,18 @@ if ($routesArray[0] == 'offer') {
                     if ($offersByPrice) {
                         sendJsonResponse(200, $offersByPrice);
                     } else {
-                        sendJsonResponse(404, null, 'No se encontraron ofertas con ese rango de precios');
+                        sendJsonResponse(404, NULL, 'No se encontraron ofertas con ese rango de precios');
                     }
                 }
             }
             break;
-            // Manejar peticiones de tipo POST para crear una nueva categoría
+
         case 'POST':
-            // Comprobación de que los campos obligatorios estén completados
-            if (
+            // Comprobación de si es creación o edición
+            $isCreating = empty($_POST['id']);
+
+            // Verificar campos obligatorios solo si es creación
+            if ($isCreating && (
                 empty($_POST['id_company_offer']) ||
                 empty($_POST['id_category_offer']) ||
                 empty($_POST['title_offer']) ||
@@ -88,123 +91,69 @@ if ($routesArray[0] == 'offer') {
                 empty($_POST['price_offer']) ||
                 empty($_POST['start_date_offer']) ||
                 empty($_POST['end_date_offer'])
-            ) {
-                sendJsonResponse(400, null, 'Todos los campos obligatorios deben ser completados.');
+            )) {
+                sendJsonResponse(400, NULL, 'Todos los campos obligatorios deben ser completados.');
                 return;
             }
 
-            // Comprobar si hay un archivo de imagen subido
-            $image_offer = null;
+            // Comprobar si hay un archivo de imagen subido (opcional)
+            $image_offer = NULL;
             if (isset($_FILES['image_offer']) && $_FILES['image_offer']['error'] === UPLOAD_ERR_OK) {
                 $image_offer = $_FILES['image_offer'];
-            } else {
-                sendJsonResponse(400, null, 'Error al cargar la imagen.'); // Si la imagen no se subió correctamente
-                return;
             }
 
-            // Obtener otros datos y asignar null si no existen
-            $discount_code_offer =
-                $web_offer = $_POST['web_offer'] ?? null;
-            $address_offer = $_POST['address_offer'] ?? null;
-
-            $data = array(
-                'id_company_offer' => $_POST['id_company_offer'],
-                'id_category_offer' => $_POST['id_category_offer'],
-                'title_offer' => $_POST['title_offer'],
-                'description_offer' => $_POST['description_offer'],
-                'price_offer' => $_POST['price_offer'],
-                'start_date_offer' => $_POST['start_date_offer'],
-                'end_date_offer' => $_POST['end_date_offer'],
-                'discount_code_offer' => $_POST['discount_code_offer'] ?? null,
-                'web_offer' => $_POST['web_offer'] ?? null,
-                'address_offer' => $_POST['address_offer'] ?? null
-            );
+            // Obtener los datos de la oferta, excluyendo valores null
+            $data = array_filter([
+                'id' => $_POST['id'] ?? NULL,
+                'id_company_offer' => $_POST['id_company_offer'] ?? NULL,
+                'id_category_offer' => $_POST['id_category_offer'] ?? NULL,
+                'title_offer' => $_POST['title_offer'] ?? NULL,
+                'description_offer' => $_POST['description_offer'] ?? NULL,
+                'price_offer' => $_POST['price_offer'] ?? NULL,
+                'start_date_offer' => $_POST['start_date_offer'] ?? NULL,
+                'end_date_offer' => $_POST['end_date_offer'] ?? NULL,
+                'discount_code_offer' => $_POST['discount_code_offer'] ?? NULL,
+                'web_offer' => $_POST['web_offer'] ?? NULL,
+                'address_offer' => $_POST['address_offer'] ?? NULL
+            ], function ($value) {
+                return $value !== null;
+            });
 
             try {
-                // Añadir la oferta con la imagen
-                $offer = $controller->addOffer($data, $image_offer);
+                if (!$isCreating) {
+                    // Actualizar oferta si tiene ID
+                    $offer = $controller->updateOffer($data, $image_offer);
 
-                // Si la oferta se creó correctamente
-                sendJsonResponse(201, 'Oferta creada exitosamente.', $offer);
-            } catch (RuntimeException $e) {
-                // Captura errores específicos de subida de imagen o creación de oferta
-                sendJsonResponse(500, null, 'Error al crear la oferta: ' . $e->getMessage());
-            } catch (Exception $e) {
-                // Captura cualquier otro error
-                sendJsonResponse(500, null, 'Error inesperado: ' . $e->getMessage());
-            }
-            break;
-
-
-        case 'PUT':
-            // Leer los datos del cuerpo de la solicitud
-            $json_data = file_get_contents('php://input');
-
-            // Convertir los datos JSON a un array
-            $dataOffer = json_decode($json_data, true);
-
-            // Si no se pudo decodificar el JSON, responder con error
-            if (json_last_error() !== JSON_ERROR_NONE) {
-                sendJsonResponse(400, null, 'Error al procesar los datos JSON');
-                break;
-            }
-
-            // Lógica de manejo de imagen (si existe)
-            $image_offer = null;
-            if (isset($_FILES['image_offer']) && $_FILES['image_offer']['error'] === UPLOAD_ERR_OK) {
-                $image_offer = $_FILES['image_offer'];
-            } elseif (!empty($dataOffer['remove_image'])) {
-                $image_offer = 'remove'; // Indicador para eliminar la imagen si es necesario
-            }
-
-            // Verificar los datos recibidos
-            $data = array(
-                'id' => $dataOffer['id'] ?? null,
-                'id_category_offer' => $dataOffer['id_category_offer'] ?? null,
-                'title_offer' => $dataOffer['title_offer'] ?? null,
-                'description_offer' => $dataOffer['description_offer'] ?? null,
-                'price_offer' => $dataOffer['price_offer'] ?? null,
-                'start_date_offer' => $dataOffer['start_date_offer'] ?? null,
-                'end_date_offer' => $dataOffer['end_date_offer'] ?? null,
-                'discount_code_offer' => $dataOffer['discount_code_offer'] ?? null,
-                'web_offer' => $dataOffer['web_offer'] ?? null,
-                'address_offer' => $dataOffer['address_offer'] ?? null,
-            );
-
-            // Llamar a la función de actualización
-            try {
-                $offer = $controller->updateOffer($data, $image_offer);
-
-                // Verificar si la actualización fue exitosa
-                if ($offer) {
-                    sendJsonResponse(200, $offer, 'Información de la oferta actualizada con éxito');
+                    if ($offer) {
+                        sendJsonResponse(200, $offer, 'Información de la oferta actualizada con éxito');
+                    } else {
+                        sendJsonResponse(404, NULL, 'Oferta no encontrada.');
+                    }
                 } else {
-                    sendJsonResponse(500, null, 'Error al actualizar la información de la oferta');
+                    // Crear nueva oferta si no tiene ID
+                    $offer = $controller->addOffer($data, $image_offer);
+                    sendJsonResponse(201, $offer,'Oferta creada exitosamente.');
                 }
             } catch (RuntimeException $e) {
-                sendJsonResponse(500, null, 'Error al actualizar la oferta: ' . $e->getMessage());
+                sendJsonResponse(500, NULL, 'Error al procesar la oferta: ' . $e->getMessage());
             } catch (Exception $e) {
-                sendJsonResponse(500, null, 'Error inesperado: ' . $e->getMessage());
+                sendJsonResponse(500, NULL, 'Error inesperado: ' . $e->getMessage());
             }
             break;
-
-
 
             // Manejar peticiones de tipo DELETE para eliminar el usuario
         case 'DELETE':
             $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT, ['options' => ['default' => 0, 'min_range' => 1]]);
             if ($controller->deleteOffer($id)) {
-                sendJsonResponse(200, 'Oferta eliminada con exito.');
+                sendJsonResponse(200,NULL, 'Oferta eliminada con exito.');
             } else {
-                sendJsonResponse(404, null, 'Oferta no encontrada');
+                sendJsonResponse(404, NULL, 'Oferta no encontrada');
             }
             break;
 
             // Manejar peticiones que no se ajusten a los anteriores métodos
         default:
-            sendJsonResponse(405, null, 'Método no permitido');
+            sendJsonResponse(405, NULL, 'Método no permitido');
             break;
     }
-} else {
-    sendJsonResponse(404, null, 'Recurso no encontrado');
 }
