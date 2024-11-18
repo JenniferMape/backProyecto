@@ -53,8 +53,9 @@ if ($routesArray[0] == 'account') {
                 if ($account->deleteAccount($id)) {
                     sendJsonResponse(200, null, 'Usuario eliminado correctamente.');
                 } else {
-                    sendJsonResponse(404, null, 'Usuario no encontrado');
+                    sendJsonResponse(404, null, 'Error al eliminar al usuario');
                 }
+            
                 break;
 
                 // Manejar peticiones que no se ajusten a los anteriores métodos

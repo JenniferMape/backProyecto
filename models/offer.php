@@ -48,7 +48,7 @@ class Offer
         return $this->convertCollection($offers);
     }
 
-    public function findOffersByPriceRange($minPrice, $maxPrice, $orderBy = 'price_offer', $orderDirection = 'asc')
+    public function findOffersByPriceRange($minPrice, $maxPrice, $orderBy = 'new_price_offer', $orderDirection = 'asc')
     {
         // Valida que la dirección es válida 
         if (!in_array($orderDirection, ['asc', 'desc'])) {
@@ -61,7 +61,8 @@ class Offer
             'id_company_offer',
             'id_category_offer',
             'title_offer',
-            'price_offer',
+            'new_price_offer',
+            'original_price_offer',
             'description_offer',
             'start_date_offer',
             'end_date_offer',
@@ -78,8 +79,8 @@ class Offer
 
         // Construye la consulta SQL
         $query = ORM::for_table('offers')
-            ->where_gte('price_offer', $minPrice)
-            ->where_lte('price_offer', $maxPrice);
+            ->where_gte('new_price_offer', $minPrice)
+            ->where_lte('new_price_offer', $maxPrice);
 
         // Aplica la ordenación dependiendo de la dirección
         if ($orderDirection === 'asc') {
@@ -95,7 +96,7 @@ class Offer
     public function addOffer($data, $image = null)
     {
         // Verificación básica de los datos antes de crear la oferta
-        if (empty($data['id_company_offer']) || empty($data['title_offer']) || empty($data['price_offer'])) {
+        if (empty($data['id_company_offer']) || empty($data['title_offer']) || empty($data['new_price_offer']) || empty($data['original_price_offer'])) {
             throw new InvalidArgumentException("Los datos de la oferta no son válidos");
         }
 
@@ -105,7 +106,8 @@ class Offer
         $offer->id_category_offer = $data['id_category_offer'];
         $offer->title_offer = $data['title_offer'];
         $offer->description_offer = $data['description_offer'];
-        $offer->price_offer = $data['price_offer'];
+        $offer->new_price_offer = $data['new_price_offer'];
+        $offer->original_price_offer = $data['original_price_offer'];
         $offer->start_date_offer = $data['start_date_offer'];
         $offer->end_date_offer = $data['end_date_offer'];
         $offer->discount_code_offer = $data['discount_code_offer'];
@@ -137,7 +139,8 @@ class Offer
             $offer->id_category_offer = isset($dataOffer['id_category_offer']) ? $dataOffer['id_category_offer'] : $offer->id_category_offer;
             $offer->title_offer = isset($dataOffer['title_offer']) ? $dataOffer['title_offer'] : $offer->title_offer;
             $offer->description_offer = isset($dataOffer['description_offer']) ? $dataOffer['description_offer'] : $offer->description_offer;
-            $offer->price_offer = isset($dataOffer['price_offer']) ? $dataOffer['price_offer'] : $offer->price_offer;
+            $offer->new_price_offer = isset($dataOffer['new_price_offer']) ? $dataOffer['new_price_offer'] : $offer->new_price_offer;
+            $offer->original_price_offer = isset($dataOffer['original_price_offer']) ? $dataOffer['original_price_offer'] : $offer->original_price_offer;
             $offer->start_date_offer = isset($dataOffer['start_date_offer']) ? $dataOffer['start_date_offer'] : $offer->start_date_offer;
             $offer->end_date_offer = isset($dataOffer['end_date_offer']) ? $dataOffer['end_date_offer'] : $offer->end_date_offer;
             $offer->discount_code_offer = isset($dataOffer['discount_code_offer']) ? $dataOffer['discount_code_offer'] : $offer->discount_code_offer;
@@ -151,7 +154,7 @@ class Offer
                 if (!empty($offer->image_offer)) {
                     $this->deleteOfferImage($offer->image_offer);
                 }
-    
+
                 // Subir la nueva imagen y asignar la ruta a la oferta
                 $uploadedFileName = $this->uploadOfferImage($offer->id, $image);
                 $offer->image_offer = 'http://chollocuenca.com/uploads/offers/' . $dataOffer['id_company_offer'] . '/' . $offer->id . '/' . $uploadedFileName;
@@ -168,52 +171,44 @@ class Offer
     }
 
 
-
     public function deleteOffer($id)
     {
+        // Buscar la oferta en la base de datos
         $offer = ORM::for_table('offers')->find_one($id);
+        
         if ($offer) {
+            if (!empty($offer->image_offer)) { 
+                $this->deleteOfferImage($offer->image_offer);
+            }
+    
             $offer->delete();
+    
             return true;
         } else {
             return false;
         }
     }
-
-    private function convertObj($obj)
-    {
-        return [
-            'id' => $obj->id ?? null,
-            'id_company_offer' => $obj->id_company_offer ?? null,
-            'id_category_offer' => $obj->id_category_offer ?? null,
-            'title_offer' => $obj->title_offer ?? null,
-            'price_offer' => $obj->price_offer ?? null,
-            'description_offer' => $obj->description_offer ?? null,
-            'start_date_offer' => $obj->start_date_offer ?? null,
-            'end_date_offer' => $obj->end_date_offer ?? null,
-            'discount_code_offer' => $obj->discount_code_offer ?? null,
-            'image_offer' => $obj->image_offer ?? null,
-            'web_offer' => $obj->web_offer ?? null,
-            'address_offer' => $obj->address_offer ?? null,
-            'created_offer' => $obj->created_offer ?? null,
-            'updated_offer' => $obj->updated_offer ?? null
-        ];
-    }
-    private function convertCollection($collection)
-    {
-        $result = [];
-        foreach ($collection as $item) {
-            $result[] = $this->convertObj($item);
-        }
-        return $result;
-    }
+    
     public function deleteOfferImage($imagePath)
     {
+        // Construir la ruta completa en el servidor
         $serverPath = $_SERVER['DOCUMENT_ROOT'] . parse_url($imagePath, PHP_URL_PATH);
+        
         if (file_exists($serverPath)) {
-            return unlink($serverPath);
+            // Eliminar el archivo
+            unlink($serverPath);
+    
+            // Obtener la carpeta donde se encontraba la imagen
+            $directoryPath = dirname($serverPath);
+    
+            // Verificar si la carpeta está vacía
+            if (is_dir($directoryPath) && count(array_diff(scandir($directoryPath), ['.', '..'])) === 0) {
+                rmdir($directoryPath); // Eliminar la carpeta si está vacía
+            }
+    
+            return true;
         } else {
-            return "El archivo no existe en la ruta especificada." . $serverPath;
+            return "El archivo no existe en la ruta especificada: " . $serverPath;
         }
     }
     public function uploadOfferImage($offerId, $image = null)
@@ -264,5 +259,35 @@ class Offer
         } else {
             throw new RuntimeException('Oferta no encontrada.');
         }
+    }
+
+
+    private function convertObj($obj)
+    {
+        return [
+            'id' => $obj->id ?? null,
+            'id_company_offer' => $obj->id_company_offer ?? null,
+            'id_category_offer' => $obj->id_category_offer ?? null,
+            'title_offer' => $obj->title_offer ?? null,
+            'new_price_offer' => $obj->new_price_offer ?? null,
+            'original_price_offer' => $obj->original_price_offer ?? null,
+            'description_offer' => $obj->description_offer ?? null,
+            'start_date_offer' => $obj->start_date_offer ?? null,
+            'end_date_offer' => $obj->end_date_offer ?? null,
+            'discount_code_offer' => $obj->discount_code_offer ?? null,
+            'image_offer' => $obj->image_offer ?? null,
+            'web_offer' => $obj->web_offer ?? null,
+            'address_offer' => $obj->address_offer ?? null,
+            'created_offer' => $obj->created_offer ?? null,
+            'updated_offer' => $obj->updated_offer ?? null
+        ];
+    }
+    private function convertCollection($collection)
+    {
+        $result = [];
+        foreach ($collection as $item) {
+            $result[] = $this->convertObj($item);
+        }
+        return $result;
     }
 }

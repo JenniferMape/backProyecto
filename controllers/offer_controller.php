@@ -88,7 +88,8 @@ if ($routesArray[0] == 'offer') {
                 empty($_POST['id_category_offer']) ||
                 empty($_POST['title_offer']) ||
                 empty($_POST['description_offer']) ||
-                empty($_POST['price_offer']) ||
+                empty($_POST['new_price_offer']) ||
+                empty($_POST['original_price_offer']) ||
                 empty($_POST['start_date_offer']) ||
                 empty($_POST['end_date_offer'])
             )) {
@@ -109,7 +110,8 @@ if ($routesArray[0] == 'offer') {
                 'id_category_offer' => $_POST['id_category_offer'] ?? NULL,
                 'title_offer' => $_POST['title_offer'] ?? NULL,
                 'description_offer' => $_POST['description_offer'] ?? NULL,
-                'price_offer' => $_POST['price_offer'] ?? NULL,
+                'new_price_offer' => $_POST['new_price_offer'] ?? NULL,
+                'original_price_offer' => $_POST['original_price_offer'] ?? NULL,
                 'start_date_offer' => $_POST['start_date_offer'] ?? NULL,
                 'end_date_offer' => $_POST['end_date_offer'] ?? NULL,
                 'discount_code_offer' => $_POST['discount_code_offer'] ?? NULL,

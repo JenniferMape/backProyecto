@@ -23,7 +23,7 @@ class Account
                 $usuario->password_user = password_hash($data['password_user'], PASSWORD_DEFAULT);
             }
 
-            if($usuario->type_user==='COMPANY' && !empty($data['cif_user'])) {
+            if ($usuario->type_user === 'COMPANY' && !empty($data['cif_user'])) {
                 $usuario->cif_user = $data['cif_user'];
             }
 
@@ -43,13 +43,33 @@ class Account
     public function deleteAccount($id)
     {
         $usuario = ORM::for_table('users')->find_one($id);
+
         if ($usuario) {
-            $usuario->delete();
-            return true;
-        } else {
+            if ($usuario->type_user === 'CLIENT') {
+
+                $this->deleteAvatar($usuario->id);
+
+                // Eliminar cuenta del cliente
+                $usuario->delete();
+                return true;
+            } elseif ($usuario->type_user === 'COMPANY') {
+                // Llamar al método existente para eliminar el avatar
+                $this->deleteAvatar($usuario->id);
+
+                // Llamar al método para eliminar la cuenta de la empresa
+                if(!$this->deleteOffersCompany($usuario->id)){
+                    return false;
+                }
+
+                // Eliminar el registro de usuario después
+                $usuario->delete();
+                return true;
+            }
+            // Tipo de usuario no reconocido
             return false;
         }
     }
+
     public function getAvatar($id)
     {
         $usuario = ORM::for_table('users')->find_one($id);
@@ -91,10 +111,10 @@ class Account
                     if (move_uploaded_file($avatar['tmp_name'], $uploadPath)) {
                         $usuario->avatar_user = 'http://chollocuenca.com/uploads/avatars/' . $newFileName;
                     } else {
-                        return 'Error al mover el archivo subido.'; // Mensaje claro de error
+                        return 'Error al mover el archivo subido.';
                     }
                 } else {
-                    return 'Tipo de archivo no permitido. Solo se permiten archivos JPG, PNG o GIF.'; // Mensaje de error claro
+                    return 'Tipo de archivo no permitido. Solo se permiten archivos JPG, PNG o GIF.';
                 }
             }
 
@@ -128,6 +148,54 @@ class Account
             }
         } else {
             return ['error' => 'Usuario no encontrado.'];
+        }
+    }
+
+    public function deleteOffersCompany($companyId)
+    {
+        try {
+            // Eliminar el directorio de la empresa si existe
+            $companyDirectory = $_SERVER['DOCUMENT_ROOT'] . "/uploads/offers/" . $companyId;
+    
+            if (is_dir($companyDirectory)) {
+                $this->deleteFolderRecursively($companyDirectory);
+            } else {
+                error_log("Directorio no encontrado: " . $companyDirectory);
+            }
+    
+            // Eliminar las ofertas de la base de datos
+            ORM::for_table('offers')
+                ->where('id_company_offer', $companyId)
+                ->delete_many();
+    
+            return true;
+        } catch (Exception $e) {
+            return false;
+        }
+    }
+    
+    private function deleteFolderRecursively($folderPath)
+    {
+        // Obtener todos los archivos y carpetas dentro de la carpeta
+        $files = array_diff(scandir($folderPath), ['.', '..']);
+    
+        foreach ($files as $file) {
+            $filePath = $folderPath . DIRECTORY_SEPARATOR . $file;
+    
+            if (is_dir($filePath)) {
+                // Llamada recursiva para subcarpetas
+                $this->deleteFolderRecursively($filePath);
+            } else {
+                // Eliminar archivo
+                if (!unlink($filePath)) {
+                    error_log("No se pudo eliminar el archivo: " . $filePath);
+                }
+            }
+        }
+    
+        // Eliminar la carpeta una vez que está vacía
+        if (!rmdir($folderPath)) {
+            error_log("No se pudo eliminar la carpeta: " . $folderPath);
         }
     }
 
