@@ -5,7 +5,7 @@ class Offer
 
     public function getAllOffers()
     {
-        $offers = ORM::for_table('offers')->find_many();
+        $offers = ORM::for_table('offers') ->order_by_desc('created_offer') ->find_many();
         return $this->convertCollection($offers);
     }
 
@@ -37,7 +37,10 @@ class Offer
 
     public function getOffersByCategory($id_category_offer)
     {
-        $offers = ORM::for_table('offers')->where('id_category_offer', $id_category_offer)->find_many();
+        $offers = ORM::for_table('offers')
+        ->where('id_category_offer', $id_category_offer)
+        ->order_by_desc('created_offer') 
+        ->find_many();
 
         return $this->convertCollection($offers);
     }
