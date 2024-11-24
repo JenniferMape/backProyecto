@@ -15,8 +15,18 @@ if ($routesArray[0] == 'favorite') {
         case 'GET':
             if (!empty($routesArray[1]) && is_numeric($routesArray[1])) {
                 // Obtener el id de la URL
-                $id = (int)$routesArray[1];
-                $favorites = $controller->getFavoritesByUser($id);
+                $id = (int) $routesArray[1];
+                // Verificar si se solicitó con detalles completos
+                $details = isset($_GET['details']) && $_GET['details'] === 'true';
+        
+                if ($details) {
+                    // Obtener detalles completos de las ofertas favoritas
+                    $favorites = $controller->getFavoritesWithDetailsByUser($id);
+                } else {
+                    // Obtener solo los IDs de las ofertas favoritas
+                    $favorites = $controller->getFavoritesByUser($id);
+                }
+        
                 if ($favorites) {
                     sendJsonResponse(200, $favorites);
                 } else {
@@ -24,7 +34,6 @@ if ($routesArray[0] == 'favorite') {
                 }
             } else {
                 $allFavorites = $controller->getAllFavorites();
-                // Verificar si se encontraron favoritos
                 if ($allFavorites) {
                     sendJsonResponse(200, $allFavorites);
                 } else {
@@ -33,55 +42,51 @@ if ($routesArray[0] == 'favorite') {
             }
             break;
 
-            // Manejar peticiones de tipo POST para crear un nuevo favorito
-        case 'POST':
-            if ($_SERVER["REQUEST_METHOD"] == "POST") {
-                // Comprobación de que los campos obligatorios estén completados
-                if (empty($_POST['id_user_favorite']) || empty($_POST['id_offer_favorite'])) {
-                    sendJsonResponse(400, null, 'Todos los campos obligatorios deben ser completados.');
-                    return;
-                }
-
-                $data = [
-                    'id_user_favorite' => filter_input(INPUT_POST, 'id_user_favorite', FILTER_VALIDATE_INT),
-                    'id_offer_favorite' => filter_input(INPUT_POST, 'id_offer_favorite', FILTER_VALIDATE_INT)
-                ];
-
-                if ($controller->addFavorite($data)) {
-                    sendJsonResponse(201, null, 'Favorito agregado correctamente.');
+            // Manejar peticiones de tipo POST para crear un nuevo favorito  o eliminar uno existe
+            case 'POST':
+                if ($_SERVER["REQUEST_METHOD"] == "POST") {
+                    $json_data = file_get_contents('php://input');
+                    $data = json_decode($json_data, true);
+            
+                    // Validar JSON y datos
+                    if (json_last_error() !== JSON_ERROR_NONE) {
+                        sendJsonResponse(400, null, 'Formato JSON inválido.');
+                        return;
+                    }
+            
+                    if (empty($data['id_user_favorite']) || empty($data['id_offer_favorite'])) {
+                        sendJsonResponse(400, null, 'Todos los campos obligatorios deben ser completados.');
+                        return;
+                    }
+            
+                    $id_user_favorite = filter_var($data['id_user_favorite'], FILTER_VALIDATE_INT);
+                    $id_offer_favorite = filter_var($data['id_offer_favorite'], FILTER_VALIDATE_INT);
+            
+                    if ($id_user_favorite === false || $id_offer_favorite === false) {
+                        sendJsonResponse(400, null, 'Los datos deben ser enteros válidos.');
+                        return;
+                    }
+            
+                    $favoriteData = [
+                        'id_user_favorite' => $id_user_favorite,
+                        'id_offer_favorite' => $id_offer_favorite,
+                    ];
+            
+                    // Usar el método toggleFavorite
+                    $result = $controller->toggleFavorite($favoriteData);
+                    if ($result) {
+                        if ($result['action'] === 'added') {
+                            sendJsonResponse(201, $result['favorite'], 'Favorito agregado correctamente.');
+                        } else {
+                            sendJsonResponse(200, null, 'Favorito eliminado correctamente.');
+                        }
+                    } else {
+                        sendJsonResponse(500, null, 'Error al procesar la acción de favoritos.');
+                    }
                 } else {
-                    sendJsonResponse(500, null, 'Error al añadir la oferta a favoritos.');
+                    sendJsonResponse(405, null, 'Método no permitido.');
                 }
-            } else {
-                sendJsonResponse(405, null, 'Método no permitido.');
-            }
-            break;
-
-            // Manejar peticiones de tipo PUT para actualizar un favorito
-        case 'PUT':
-            $json_data = file_get_contents('php://input');
-            $data = json_decode($json_data, true);
-
-            if (json_last_error() === JSON_ERROR_NONE) {
-                if ($controller->updateFavorite($data)) {
-                    sendJsonResponse(200, $data, 'El favorito ha sido actualizado.');
-                } else {
-                    sendJsonResponse(500, null, 'Error al actualizar el favorito.');
-                }
-            } else {
-                sendJsonResponse(400, null, 'Datos inválidos.');
-            }
-            break;
-
-            // Manejar peticiones de tipo DELETE para eliminar un favorito
-        case 'DELETE':
-            $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT, ['options' => ['default' => 0, 'min_range' => 1]]);
-            if ($id && $controller->deleteFavorite($id)) {
-                sendJsonResponse(200, null, 'Favorito eliminado correctamente.');
-            } else {
-                sendJsonResponse(404, null, 'Error al eliminar la oferta de favoritos.');
-            }
-            break;
+                break;
 
             // Manejar peticiones que no se ajusten a los anteriores métodos
         default:
