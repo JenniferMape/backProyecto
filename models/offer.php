@@ -5,13 +5,26 @@ class Offer
 
     public function getAllOffers()
     {
-        $offers = ORM::for_table('offers') ->order_by_desc('created_offer') ->find_many();
+        $offers = ORM::for_table('offers')
+            ->join('categories', ['offers.id_category_offer', '=', 'categories.id']) // Join con categorías
+            ->join('users', ['offers.id_company_offer', '=', 'users.id'])           // Join con compañías (usuarios)
+            ->select('offers.*')                 // Selecciona todos los campos de la tabla ofertas
+            ->select('categories.name_category', 'category_name') // Nombre de la categoría
+            ->select('users.name_user', 'company_name')           // Nombre de la compañía
+            ->order_by_desc('offers.created_offer') // Ordena por fecha de creación
+            ->find_many();
         return $this->convertCollection($offers);
     }
 
     public function getOfferById($id)
     {
-        $offer = ORM::for_table('offers')->find_one($id);
+        $offer = ORM::for_table('offers')
+            ->join('categories', ['offers.id_category_offer', '=', 'categories.id']) // Join con categorías
+            ->join('users', ['offers.id_company_offer', '=', 'users.id'])           // Join con compañías (usuarios)
+            ->select('offers.*')                  // Selecciona todos los campos de la tabla ofertas
+            ->select('categories.name_category', 'category_name') // Nombre de la categoría
+            ->select('users.name_user', 'company_name')           // Nombre de la compañía
+            ->find_one($id); // Encuentra la oferta por su ID
         return $offer ? $this->convertObj($offer) : null;
     }
 
@@ -38,9 +51,14 @@ class Offer
     public function getOffersByCategory($id_category_offer)
     {
         $offers = ORM::for_table('offers')
-        ->where('id_category_offer', $id_category_offer)
-        ->order_by_desc('created_offer') 
-        ->find_many();
+            ->join('categories', ['offers.id_category_offer', '=', 'categories.id']) // Join con categorías
+            ->join('users', ['offers.id_company_offer', '=', 'users.id'])           // Join con compañías (usuarios)
+            ->select('offers.*')                  // Selecciona todos los campos de la tabla ofertas
+            ->select('categories.name_category', 'category_name') // Nombre de la categoría
+            ->select('users.name_user', 'company_name')           // Nombre de la compañía
+            ->where('offers.id_category_offer', $id_category_offer) // Filtra por la categoría
+            ->order_by_desc('offers.created_offer') // Ordena por fecha de creación
+            ->find_many();
 
         return $this->convertCollection($offers);
     }
@@ -178,37 +196,37 @@ class Offer
     {
         // Buscar la oferta en la base de datos
         $offer = ORM::for_table('offers')->find_one($id);
-        
+
         if ($offer) {
-            if (!empty($offer->image_offer)) { 
+            if (!empty($offer->image_offer)) {
                 $this->deleteOfferImage($offer->image_offer);
             }
-    
+
             $offer->delete();
-    
+
             return true;
         } else {
             return false;
         }
     }
-    
+
     public function deleteOfferImage($imagePath)
     {
         // Construir la ruta completa en el servidor
         $serverPath = $_SERVER['DOCUMENT_ROOT'] . parse_url($imagePath, PHP_URL_PATH);
-        
+
         if (file_exists($serverPath)) {
             // Eliminar el archivo
             unlink($serverPath);
-    
+
             // Obtener la carpeta donde se encontraba la imagen
             $directoryPath = dirname($serverPath);
-    
+
             // Verificar si la carpeta está vacía
             if (is_dir($directoryPath) && count(array_diff(scandir($directoryPath), ['.', '..'])) === 0) {
                 rmdir($directoryPath); // Eliminar la carpeta si está vacía
             }
-    
+
             return true;
         } else {
             return "El archivo no existe en la ruta especificada: " . $serverPath;
@@ -282,7 +300,9 @@ class Offer
             'web_offer' => $obj->web_offer ?? null,
             'address_offer' => $obj->address_offer ?? null,
             'created_offer' => $obj->created_offer ?? null,
-            'updated_offer' => $obj->updated_offer ?? null
+            'updated_offer' => $obj->updated_offer ?? null,
+            "category_name" => $obj->category_name,
+            "company_name" => $obj->company_name
         ];
     }
     private function convertCollection($collection)
