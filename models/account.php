@@ -57,7 +57,7 @@ class Account
                 $this->deleteAvatar($usuario->id);
 
                 // Llamar al método para eliminar la cuenta de la empresa
-                if (!$this->deleteOffersCompany($usuario->id)) {
+                if(!$this->deleteOffersCompany($usuario->id)){
                     return false;
                 }
 
@@ -109,7 +109,7 @@ class Account
 
                     // Mover el archivo subido
                     if (move_uploaded_file($avatar['tmp_name'], $uploadPath)) {
-                        $usuario->avatar_user = URL . '/uploads/avatars/' . $newFileName;
+                        $usuario->avatar_user = URL.'/uploads/avatars/' . $newFileName;
                     } else {
                         return 'Error al mover el archivo subido.';
                     }
@@ -130,8 +130,8 @@ class Account
         $usuario = ORM::for_table('users')->find_one($id);
 
         if ($usuario) {
-            // Ruta absoluta de la carpeta de uploads en el servidor
-            $uploadDir = __DIR__ . '/uploads/avatars/'; // Usar __DIR__ para obtener la ruta absoluta
+            // Ruta absoluta de la carpeta de uploads
+            $uploadDir = realpath(__DIR__ . '/../uploads/avatars/') . '/';
 
             // Verificar si el usuario tiene un avatar y si el archivo existe
             if ($usuario->avatar_user && file_exists($uploadDir . basename($usuario->avatar_user))) {
@@ -154,36 +154,34 @@ class Account
     public function deleteOffersCompany($companyId)
     {
         try {
-            // Ruta absoluta al directorio de ofertas de la empresa
-            $companyDirectory = __DIR__ . "/uploads/offers/" . $companyId;
-
+            // Eliminar el directorio de la empresa si existe
+            $companyDirectory = $_SERVER['DOCUMENT_ROOT'] . "/uploads/offers/" . $companyId;
+    
             if (is_dir($companyDirectory)) {
                 $this->deleteFolderRecursively($companyDirectory);
             } else {
                 error_log("Directorio no encontrado: " . $companyDirectory);
             }
-
+    
             // Eliminar las ofertas de la base de datos
             ORM::for_table('offers')
                 ->where('id_company_offer', $companyId)
                 ->delete_many();
-
+    
             return true;
         } catch (Exception $e) {
-            error_log("Error al eliminar ofertas: " . $e->getMessage());
             return false;
         }
     }
-
-
+    
     private function deleteFolderRecursively($folderPath)
     {
         // Obtener todos los archivos y carpetas dentro de la carpeta
         $files = array_diff(scandir($folderPath), ['.', '..']);
-
+    
         foreach ($files as $file) {
             $filePath = $folderPath . DIRECTORY_SEPARATOR . $file;
-
+    
             if (is_dir($filePath)) {
                 // Llamada recursiva para subcarpetas
                 $this->deleteFolderRecursively($filePath);
@@ -194,7 +192,7 @@ class Account
                 }
             }
         }
-
+    
         // Eliminar la carpeta una vez que está vacía
         if (!rmdir($folderPath)) {
             error_log("No se pudo eliminar la carpeta: " . $folderPath);

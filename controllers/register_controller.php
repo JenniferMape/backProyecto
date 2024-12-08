@@ -1,21 +1,24 @@
 <?php
-
-// Si el método es OPTIONS, devolver inmediatamente los encabezados sin ejecutar más código.
 if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
     http_response_code(200);
     exit();
 }
+
+
 include('./helpers/HTTPMethod.php');
 include('./models/account.php');
 include('./helpers/response.php');
+include('./models/register.php');
 
-
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
 use \Firebase\JWT\JWT;
 $JWT_SECRET = getenv('JWT_SECRET');
 
 
 $method = new HTTPMethod();
 $methodR = $method->getMethod();
+$register = new Register();
 //  echo '<pre>'; print_r($method->getMethod()); echo '</pre>';+
 
 if (!empty($routesArray[1])) {
@@ -89,6 +92,85 @@ if (!empty($routesArray[1])) {
         case 'recovery':
         
             //GENERO UNA NUEVA CONTRASEÑA, SE MANDA AL EMAIL (COMPROBAR QUE EXISTA ANTES) Y SE GUARDA LA NUEVA CONTRASEÑA EN LA BD
+               if ($_SERVER["REQUEST_METHOD"] == "POST") {
+
+                // Obtener los datos del cuerpo de la solicitud POST
+                $input = file_get_contents('php://input');
+                $data = json_decode($input, true);
+        
+                // Verificar si la decodificación fue exitosa
+                if (json_last_error() !== JSON_ERROR_NONE) {
+                    sendJsonResponse(400, null, 'Formato de JSON inválido.');
+                    return;
+                }
+        
+                // Verificar si el email está presente en los datos
+                if (empty($data['email_user'])) {
+                    sendJsonResponse(400, null, 'El campo de email es obligatorio.');
+                    return;
+                }
+        
+                // Validar el formato del email
+                if (!filter_var($data['email_user'], FILTER_VALIDATE_EMAIL)) {
+                    sendJsonResponse(400, null, 'El formato del email no es válido.');
+                    return;
+                }
+        
+                // Buscar el usuario en la base de datos por el email
+                $user = ORM::for_table('users')->where('email_user', $data['email_user'])->find_one();
+        
+                if (!$user) {
+                    sendJsonResponse(404, null, 'No se encontró un usuario con ese email.');
+                    return;
+                }
+        
+                // Generar una nueva contraseña aleatoria
+                $newPassword = $register->generateRandomPassword();
+        
+                // Hashear la nueva contraseña
+                $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
+        
+                // Actualizar la contraseña en la base de datos
+                $user->password_user = $hashedPassword;
+        
+                if ($user->save()) {
+                    // Enviar la nueva contraseña al email
+                    $mail = new PHPMailer(true);
+                    try {
+                        // Configuración del servidor SMTP
+                        $mail->isSMTP();
+                        $mail->Host = getenv('MAIL_HOST');
+                        $mail->SMTPAuth = true;
+                        $mail->Username = getenv('MAIL_USERNAME');
+                        $mail->Password = getenv('MAIL_PASSWORD');
+                        $mail->SMTPSecure = getenv('MAIL_ENCRYPTION') == 'TLS' ? PHPMailer::ENCRYPTION_STARTTLS : PHPMailer::ENCRYPTION_SMTPS;
+                        $mail->Port = getenv('MAIL_PORT');
+        
+                        // Remitente y destinatario
+                        $mail->setFrom(getenv('MAIL_USERNAME'), 'Chollo Cuenca');
+                        $mail->addAddress($data['email_user']); // Enviar al correo del usuario
+        
+                        // Contenido del correo
+                        $mail->isHTML(true);
+                        $mail->Subject = 'Recuperacion de cuenta - CholloCuenca';
+                        $mail->Body = "
+                            <h2>Recuperación de cuenta</h2>
+                            <p>Tu nueva contraseña es: <strong>$newPassword</strong></p>
+                            <p>Recuerda cambiarla por una contraseña más segura una vez inicies sesión.</p>
+                        ";
+        
+                        $mail->send();
+                        sendJsonResponse(200, null, 'Se ha enviado una nueva contraseña a tu correo.');
+                    } catch (Exception $e) {
+                        sendJsonResponse(500, null, 'No se pudo enviar el correo.');
+                        error_log('Error al enviar el correo: ' . $mail->ErrorInfo);
+                    }
+                } else {
+                    sendJsonResponse(500, null, 'Error al actualizar la contraseña.');
+                }
+            } else {
+                sendJsonResponse(405, null, 'Método no permitido.');
+            }
             break;
         case 'new':
             if ($_SERVER["REQUEST_METHOD"] == "POST") {
@@ -187,5 +269,14 @@ if (!empty($routesArray[1])) {
         default:
             echo 'default';
             break;
+    }
+     function generateRandomPassword($length = 12)
+    {
+        $characters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()';
+        $password = '';
+        for ($i = 0; $i < $length; $i++) {
+            $password .= $characters[random_int(0, strlen($characters) - 1)];
+        }
+        return $password;
     }
 }
