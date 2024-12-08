@@ -1,17 +1,43 @@
-Options All -Indexes
+# Deshabilitar la indexación de directorios
+Options -Indexes
 Options -MultiViews
 
+# Habilitar mod_rewrite
 RewriteEngine On
 
-# Habilitar CORS
-
+# Habilitar CORS (para permitir solicitudes desde otros dominios si es necesario)
+<IfModule mod_headers.c>
+    # Header set Access-Control-Allow-Origin "https://chollocuenca.site"
+    Header set Access-Control-Allow-Origin "*"
+    Header set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+    Header set Access-Control-Allow-Headers "Content-Type, Authorization"
+</IfModule>
 
 # Asegurarse de que no se apliquen reglas a archivos o directorios reales
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 
-# Redirigir todas las solicitudes a index.php excepto las que correspondan a archivos reales o directorios
+# Redirigir todas las solicitudes a index.php, excepto las que corresponden a archivos reales o directorios
 RewriteRule ^([a-zA-Z_-]+)$ index.php?action=$1 [L,QSA]
 RewriteRule ^([a-zA-Z_-]+)/([0-9]+)$ index.php?action=$1&id=$2 [L,QSA]
 RewriteRule ^([a-zA-Z_-]+)/([a-zA-Z_-]+)$ index.php?action=$1&subaction=$2 [L,QSA]
 RewriteRule ^([a-zA-Z_-]+)/([a-zA-Z_-]+)/([0-9]+)$ index.php?action=$1&subaction=$2&id=$3 [L,QSA]
+
+<Files .htaccess>
+    Require all denied
+</Files>
+
+#Variables de entorno
+
+SetEnv DB_HOST localhost
+SetEnv DB_NAME u101606847_chollo_cuenca
+SetEnv DB_USER u101606847_jmp92
+SetEnv DB_PASSWORD CcjmpDaw92
+
+SetEnv JWT_SECRET=jny6i$ocue9w
+
+SetEnv MAIL_HOST smtp.hostinger.com
+SetEnv MAIL_USERNAME contacto@chollocuenca.site
+SetEnv MAIL_PASSWORD CcjmpDaw92%
+SetEnv MAIL_ENCRYPTION SSL
+SetEnv MAIL_PORT 465

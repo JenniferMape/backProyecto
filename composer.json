@@ -11,5 +11,6 @@
             "name": "jennifer madrigal"
         }
     ],
-    "require": {"firebase/php-jwt": "^6.0"}
+    "require": {"firebase/php-jwt": "^6.0",
+        "phpmailer/phpmailer": "^6.9"}
 }

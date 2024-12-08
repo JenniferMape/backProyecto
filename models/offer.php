@@ -141,7 +141,7 @@ class Offer
         // Subir la imagen de la oferta usando el ID recién creado
         if ($image) {
             $uploadedFileName = $this->uploadOfferImage($offer->id, $image);
-            $offer->image_offer = 'http://chollocuenca.com/uploads/offers/' . $data['id_company_offer'] . '/' . $offer->id . '/' . $uploadedFileName;
+            $offer->image_offer = URL.'/uploads/offers/'. $data['id_company_offer'] . '/' . $offer->id . '/' . $uploadedFileName;
             $offer->save();
         }
 
@@ -178,7 +178,7 @@ class Offer
 
                 // Subir la nueva imagen y asignar la ruta a la oferta
                 $uploadedFileName = $this->uploadOfferImage($offer->id, $image);
-                $offer->image_offer = 'http://chollocuenca.com/uploads/offers/' . $dataOffer['id_company_offer'] . '/' . $offer->id . '/' . $uploadedFileName;
+                $offer->image_offer = URL.'/uploads/offers/'. $dataOffer['id_company_offer'] . '/' . $offer->id . '/' . $uploadedFileName;
             }
             //Guardar los cambios en la base de datos
             $offer->save();

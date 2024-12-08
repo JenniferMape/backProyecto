@@ -11,7 +11,7 @@ include('./helpers/response.php');
 
 
 use \Firebase\JWT\JWT;
-use \Firebase\JWT\Key;
+$JWT_SECRET = getenv('JWT_SECRET');
 
 
 $method = new HTTPMethod();
@@ -51,7 +51,7 @@ if (!empty($routesArray[1])) {
 
                 // Verificar si el usuario existe y la contraseña es correcta
                 if ($usuario && password_verify($data['password_user'], $usuario->password_user)) {
-                    $key = JWT_SECRET;
+                    $key = $JWT_SECRET;
                     $issuedAt = time();
                     $expirationTime = $issuedAt + 3600;
                     $payload = [
@@ -87,35 +87,7 @@ if (!empty($routesArray[1])) {
             break;
 
         case 'recovery':
-            // if ($_SERVER["REQUEST_METHOD"] == "POST") {
-            //     // Validación inicial de campos requeridos
-            //     if (empty($_POST['current_password']) || empty($_POST['new_password'])) {
-
-            //         $cR->sendJsonResponse(400, null,'Todos los campos son obligatorios.');
-
-            //         return;
-            //     }
-
-            //     // Verificar si la contraseña actual es correcta
-            //     if (!$usuario || !password_verify($_POST['current_password'], $usuario->password_user)) {
-            //         $cR->sendJsonResponse(403, null,'La contraseña actual es incorrecta.');
-            //         return;
-            //     }
-
-            //     // Validación de la nueva contraseña (p.ej., longitud mínima)
-            //     if (strlen($_POST['new_password']) < 8) {
-            //         $cR->sendJsonResponse(400, null,'La nueva contraseña debe tener al menos 8 caracteres.');
-            //         return;
-            //     }
-
-            //     // Cambiar la contraseña en la base de datos
-            //     $usuario->password_user = password_hash($_POST['new_password'], PASSWORD_DEFAULT);
-            //     $usuario->save();
-            //     $cR->sendJsonResponse(200, $usuario->name_user,'Contraseña actualizada correctamente.');
-
-            // } else {
-            //     $cR->sendJsonResponse(405, null,'Método no permitido.');
-            // }
+        
             //GENERO UNA NUEVA CONTRASEÑA, SE MANDA AL EMAIL (COMPROBAR QUE EXISTA ANTES) Y SE GUARDA LA NUEVA CONTRASEÑA EN LA BD
             break;
         case 'new':
@@ -178,7 +150,7 @@ if (!empty($routesArray[1])) {
                 $usuario->avatar_user = isset($data['avatar_user']) ? $data['avatar_user'] : null;
 
                 if ($usuario->save()) {
-                    $key = JWT_SECRET;
+                    $key = $JWT_SECRET;
                     $issuedAt = time();
                     $expirationTime = $issuedAt + 3600;
                     $payload = [

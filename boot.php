@@ -1,18 +1,22 @@
 <?php
-require ('env.php');
 require('./vendor/idiorm.php');
 require 'vendor/autoload.php';
+
 
 /******************************
  * Conexion DB
 *******************************/
-ORM::configure("mysql:host=".DB_HOST.";dbname=".DB_NAME,null);
+// Acceso a las variables de entorno
+$dbHost = getenv('DB_HOST');
+$dbName = getenv('DB_NAME');
+$dbUser = getenv('DB_USER');
+$dbPassword = getenv('DB_PASSWORD');
 
-ORM::configure('username', DB_USER);
-
-// ORM::configure('password', $db_password);
+// Configuración de la base de datos en ORM
+ORM::configure("mysql:host=" . $dbHost . ";dbname=" . $dbName);
+ORM::configure('username', $dbUser);
+ORM::configure('password', $dbPassword);
 
 ORM::configure('driver_options', array(PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES utf8'));
-
 ORM::configure('return_result_sets', true);
 

@@ -1,7 +1,4 @@
 <?php
-
-
-
 $cR = new RoutesController();
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $routesArray = explode('/', trim($uri, '/'));
